@@ -18,6 +18,10 @@ See `docs/migration.md` for details.
 
 ## Quick Start
 
+First move to the project's folder you are interested in with: `cd <project_name>`.
+
+Then:
+
 ```bash
 npm install
 npm run dev
