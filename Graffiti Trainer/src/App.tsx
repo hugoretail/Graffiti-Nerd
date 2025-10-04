@@ -1,76 +1,122 @@
-import { useEffect, useRef } from 'react'
-import * as PIXI from 'pixi.js'
-import './App.css'
 
-function PixiCanvas() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const appRef = useRef<PIXI.Application | null>(null)
+import { useEffect, useRef } from 'react'
+function CanvasSpray() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const spraying = useRef(false)
+  const mousePos = useRef<{ x: number; y: number } | null>(null)
+  const lastPos = useRef<{ x: number; y: number } | null>(null)
+  const sprayFrame = useRef<number | null>(null)
 
   useEffect(() => {
-    let destroyed = false
-    if (!containerRef.current) return
-    //create PixiJS app with v8 API
-    const app = new PIXI.Application()
-    appRef.current = app
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    //async init and append canvas
-    app.init({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      background: '#222222',
-      antialias: true,
-      resolution: window.devicePixelRatio || 1,
-    }).then(() => {
-      if (destroyed) return
-      containerRef.current?.appendChild(app.canvas)
-
-      //mouse event tracking
-      let mouseDown = false
-      let mousePos = { x: 0, y: 0 }
-      app.canvas.addEventListener('pointerdown', (e) => {
-        mouseDown = true
-        const evt = e as PointerEvent
-        mousePos = { x: evt.offsetX, y: evt.offsetY }
-        //console.log('pointerdown', mousePos)
-      })
-      app.canvas.addEventListener('pointerup', () => {
-        mouseDown = false
-      })
-      app.canvas.addEventListener('pointermove', (e) => {
-        if (mouseDown) {
-          const evt = e as PointerEvent
-          mousePos = { x: evt.offsetX, y: evt.offsetY }
-          //console.log('pointermove', mousePos)
-        }
-      })
-
-      //resize handler
-      function handleResize() {
-        if (app.renderer) app.resize()
-      }
-      window.addEventListener('resize', handleResize)
-
-      //handle WebGL context loss
-      app.canvas.addEventListener('webglcontextlost', (e) => {
-        e.preventDefault()
-        //console.log('WebGL context lost, attempting to recover...')
-        // Optionally, re-initialize PixiJS here
-      })
-
-      //cleanup
-      appRef.current = app
-    })
-
-    return () => {
-      destroyed = true
-      window.removeEventListener('resize', () => { if (app.renderer) app.resize() })
-      if (app.renderer) app.destroy(true, { children: true })
+    //set canvas size and DPR scaling
+    function resize() {
+      if (!canvas || !ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
-  }, [])
+    resize();
+    window.addEventListener('resize', resize);
 
-  return <div ref={containerRef} style={{ width: '100vw', height: '100vh' }} />
+    function getPos(e: MouseEvent) {
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+
+    function onDown(e: MouseEvent) {
+      spraying.current = true;
+      mousePos.current = getPos(e);
+      lastPos.current = getPos(e);
+      sprayLoop();
+    }
+    function onUp() {
+      spraying.current = false;
+      mousePos.current = null;
+      lastPos.current = null;
+      if (sprayFrame.current) {
+        cancelAnimationFrame(sprayFrame.current);
+        sprayFrame.current = null;
+      }
+    }
+    function onMove(e: MouseEvent) {
+      if (!spraying.current) return;
+      lastPos.current = mousePos.current;
+      mousePos.current = getPos(e);
+    }
+
+    function sprayLoop() {
+      if (!spraying.current || !mousePos.current || !ctx) return;
+      const { x, y } = mousePos.current;
+      //calculate velocity
+      let velocity = 0;
+      if (lastPos.current) {
+        const dx = x - lastPos.current.x;
+        const dy = y - lastPos.current.y;
+        velocity = Math.sqrt(dx * dx + dy * dy);
+      }
+      //spray gets lighter when moving fast
+  const baseDensity = 420;
+      const minAlpha = 0.38;
+      const maxAlpha = 0.92;
+      const radius = 16;
+      //fade: sharper center, softer edge
+      const fade = Math.max(minAlpha, maxAlpha - velocity * 0.012);
+      const density = Math.max(120, baseDensity - velocity * 0.7);
+      for (let i = 0; i < density; i++) {
+        const angle = Math.random() * 2 * Math.PI;
+        const r = radius * Math.pow(Math.random(), 1.7);
+        const dx = x + r * Math.cos(angle);
+        const dy = y + r * Math.sin(angle);
+        const localAlpha = fade * (1 - r / radius * 0.7);
+  ctx.fillStyle = `rgba(255,255,255,${localAlpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1.3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      lastPos.current = { x, y };
+      sprayFrame.current = requestAnimationFrame(sprayLoop);
+    }
+
+    canvas.addEventListener('mousedown', onDown);
+    window.addEventListener('mouseup', onUp);
+    canvas.addEventListener('mousemove', onMove);
+    return () => {
+      canvas.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup', onUp);
+      canvas.removeEventListener('mousemove', onMove);
+      if (sprayFrame.current) cancelAnimationFrame(sprayFrame.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  //canvas fills the whole screen
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: '100vw',
+        height: '100vh',
+        background: '#222',
+        display: 'block',
+      }}
+    />
+  );
+
 }
 
 export default function App() {
-  return <PixiCanvas />
+  return <CanvasSpray />;
 }
