@@ -1,4 +1,22 @@
 
+
+//Canvas & input spec
+//- HTML5 Canvas 2D, fills viewport, resizes with window
+//- Device Pixel Ratio scaling for sharpness
+//- Input: mouse only (desktop focus), pointer events for future
+//- Drawing: spray effect only (no pen)
+//- Export: PNG via button
+//- Drip effect when holding still
+//- Burst effect on initial click (pressure)
+
+//Spray effect algorithm v1 spec
+//- Random circular distribution per frame
+//- Density and opacity fade with mouse velocity (moving fast = lighter/dusty)
+//- Burst of paint on mouse down (pressure)
+//- Edge fade: sharper center, softer edge
+//- Drip effect: appears when holding still
+//- Parameters: radius, density, min/max opacity
+//- Future: add color picker, nozzle jitter, pressure support, performance tuning
 import './App.css'
 import { useRef, useEffect } from 'react'
 
@@ -55,7 +73,28 @@ function Canvas() {
       spraying.current = true //spraying starts
       mousePos.current = getPos(e)
       lastPos.current = getPos(e)
+      //burst effect: more paint on initial click
+      burstSpray(mousePos.current)
       sprayLoop() //start spray loop
+    }
+
+    //burst spray function
+    function burstSpray(pos: { x: number; y: number } | null) {
+      if (!pos || !ctx) return
+      const burstDensity = 180 //number of dots in burst
+      const burstRadius = 16 //same as spray radius
+      for (let i = 0; i < burstDensity; i++) {
+        const angle = Math.random() * 2 * Math.PI
+        const r = burstRadius * Math.pow(Math.random(), 1.7)
+        const dx = pos.x + r * Math.cos(angle)
+        const dy = pos.y + r * Math.sin(angle)
+        //center is darker, edge is lighter
+        const localAlpha = 0.85 * (1 - r / burstRadius * 0.7)
+        ctx.fillStyle = `rgba(34,34,34,${localAlpha.toFixed(2)})` //burst color
+        ctx.beginPath()
+        ctx.arc(dx, dy, 1.5, 0, 2 * Math.PI)
+        ctx.fill()
+      }
     }
     //stop spraying on mouse up
     function onUp() {
