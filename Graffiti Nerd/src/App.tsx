@@ -86,23 +86,40 @@ function Canvas() {
         velocity = Math.sqrt(dx * dx + dy * dy)
       }
       //spray gets lighter when moving fast
-  const baseDensity = 120 //base dots per frame
-  const minAlpha = 0.25 //minimum opacity (darker)
-  const maxAlpha = 0.7 //maximum opacity
-  const radius = 20 //spray radius
-  //fade based on velocity (moving fast = lighter, but less extreme)
-  const fade = Math.max(minAlpha, maxAlpha - velocity * 0.02) //less fade per speed
-  //density also fades a bit with velocity, but stays higher
-  const density = Math.max(70, baseDensity - velocity * 1.2) //higher minimum density
+      const baseDensity = 140 //base dots per frame
+      const minAlpha = 0.32 //minimum opacity (darker)
+      const maxAlpha = 0.8 //maximum opacity
+      const radius = 16 //skinny cap: smaller radius
+      //edge fade: softer edge, sharper center
+      const fade = Math.max(minAlpha, maxAlpha - velocity * 0.018)
+      //density also fades a bit with velocity, but stays higher
+      const density = Math.max(80, baseDensity - velocity * 1.1)
       for (let i = 0; i < density; i++) {
         const angle = Math.random() * 2 * Math.PI
-        const r = radius * Math.sqrt(Math.random())
+        //edge fade: more particles near center, fewer at edge
+        const r = radius * Math.pow(Math.random(), 1.7)
         const dx = x + r * Math.cos(angle)
         const dy = y + r * Math.sin(angle)
-        ctx.fillStyle = `rgba(34,34,34,${fade.toFixed(2)})` //spray color
+        //center is darker, edge is lighter
+        const localAlpha = fade * (1 - r / radius * 0.7)
+        ctx.fillStyle = `rgba(34,34,34,${localAlpha.toFixed(2)})` //spray color
         ctx.beginPath()
-        ctx.arc(dx, dy, 1.5, 0, 2 * Math.PI)
+        ctx.arc(dx, dy, 1.3, 0, 2 * Math.PI)
         ctx.fill()
+      }
+      //drip effect: if holding still, add a drip below
+      if (velocity < 1.5 && Math.random() < 0.04) {
+        //drip appears randomly when slow
+        ctx.beginPath()
+        ctx.arc(x, y + radius + 8, 2.2, 0, 2 * Math.PI)
+        ctx.fillStyle = 'rgba(34,34,34,0.7)'
+        ctx.fill()
+        ctx.beginPath()
+        ctx.moveTo(x, y + radius)
+        ctx.lineTo(x, y + radius + 12)
+        ctx.strokeStyle = 'rgba(34,34,34,0.5)'
+        ctx.lineWidth = 1.2
+        ctx.stroke()
       }
       lastPos.current = { x, y }
       sprayFrame.current = requestAnimationFrame(sprayLoop)
