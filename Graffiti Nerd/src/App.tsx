@@ -1,5 +1,3 @@
-
-
 //Canvas & input spec
 //- HTML5 Canvas 2D, fills viewport, resizes with window
 //- Device Pixel Ratio scaling for sharpness
@@ -81,7 +79,7 @@ function Canvas() {
     //burst spray function
     function burstSpray(pos: { x: number; y: number } | null) {
       if (!pos || !ctx) return
-      const burstDensity = 180 //number of dots in burst
+      const burstDensity = 320 //number of dots in burst (higher for more paint)
       const burstRadius = 16 //same as spray radius
       for (let i = 0; i < burstDensity; i++) {
         const angle = Math.random() * 2 * Math.PI
@@ -89,10 +87,10 @@ function Canvas() {
         const dx = pos.x + r * Math.cos(angle)
         const dy = pos.y + r * Math.sin(angle)
         //center is darker, edge is lighter
-        const localAlpha = 0.85 * (1 - r / burstRadius * 0.7)
+        const localAlpha = 0.95 * (1 - r / burstRadius * 0.7)
         ctx.fillStyle = `rgba(34,34,34,${localAlpha.toFixed(2)})` //burst color
         ctx.beginPath()
-        ctx.arc(dx, dy, 1.5, 0, 2 * Math.PI)
+        ctx.arc(dx, dy, 1.7, 0, 2 * Math.PI)
         ctx.fill()
       }
     }
@@ -125,14 +123,14 @@ function Canvas() {
         velocity = Math.sqrt(dx * dx + dy * dy)
       }
       //spray gets lighter when moving fast
-      const baseDensity = 140 //base dots per frame
-      const minAlpha = 0.32 //minimum opacity (darker)
-      const maxAlpha = 0.8 //maximum opacity
+      const baseDensity = 220 //base dots per frame (higher for more paint)
+      const minAlpha = 0.38 //minimum opacity (darker)
+      const maxAlpha = 0.92 //maximum opacity
       const radius = 16 //skinny cap: smaller radius
       //edge fade: softer edge, sharper center
-      const fade = Math.max(minAlpha, maxAlpha - velocity * 0.018)
+      const fade = Math.max(minAlpha, maxAlpha - velocity * 0.012)
       //density also fades a bit with velocity, but stays higher
-      const density = Math.max(80, baseDensity - velocity * 1.1)
+      const density = Math.max(120, baseDensity - velocity * 0.7)
       for (let i = 0; i < density; i++) {
         const angle = Math.random() * 2 * Math.PI
         //edge fade: more particles near center, fewer at edge
