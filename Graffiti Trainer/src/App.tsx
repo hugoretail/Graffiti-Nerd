@@ -60,28 +60,50 @@ function CanvasSpray() {
     function sprayLoop() {
       if (!spraying.current || !mousePos.current || !ctx) return;
       const { x, y } = mousePos.current;
-      //calculate velocity
       let velocity = 0;
+      let lastX = x, lastY = y;
       if (lastPos.current) {
         const dx = x - lastPos.current.x;
         const dy = y - lastPos.current.y;
         velocity = Math.sqrt(dx * dx + dy * dy);
+        lastX = lastPos.current.x;
+        lastY = lastPos.current.y;
       }
-      //spray gets lighter when moving fast
-  const baseDensity = 420;
+      //can control: mouse speed maps to spray sharpness, size, and paint amount
       const minAlpha = 0.38;
       const maxAlpha = 0.92;
-      const radius = 16;
-      //fade: sharper center, softer edge
-      const fade = Math.max(minAlpha, maxAlpha - velocity * 0.012);
-      const density = Math.max(120, baseDensity - velocity * 0.7);
-      for (let i = 0; i < density; i++) {
+      //speed mapping: high speed = close/sharp, low speed = far/soft
+      //clamp velocity for reasonable effect
+      const v = Math.min(Math.max(velocity, 0), 40);
+      //radius shrinks with speed, sharpness increases
+      const minRadius = 8;
+      const maxRadius = 22;
+      const radius = maxRadius - (v / 40) * (maxRadius - minRadius);
+      //fade sharper with speed
+      const fade = Math.max(minAlpha, maxAlpha - v * 0.018);
+  const minDensity = 120;
+  const maxDensity = 8000;
+      //emit dots based on distance moved, not FPS
+      let distance = 0;
+      if (lastPos.current) {
+        const dx = x - lastPos.current.x;
+        const dy = y - lastPos.current.y;
+        distance = Math.sqrt(dx * dx + dy * dy);
+      }
+      //dots per pixel moved (tune this value for realism)
+      const dotsPerPixel = 40; // try 40 dots per pixel
+      const totalDots = Math.max(minDensity, Math.round(distance * dotsPerPixel));
+      //spray along the path between last and current position
+      for (let d = 0; d < totalDots; d++) {
+        const t = totalDots === 1 ? 1 : d / totalDots;
+        const sprayX = lastPos.current ? lastPos.current.x + (x - lastPos.current.x) * t : x;
+        const sprayY = lastPos.current ? lastPos.current.y + (y - lastPos.current.y) * t : y;
         const angle = Math.random() * 2 * Math.PI;
         const r = radius * Math.pow(Math.random(), 1.7);
-        const dx = x + r * Math.cos(angle);
-        const dy = y + r * Math.sin(angle);
+        const dx = sprayX + r * Math.cos(angle);
+        const dy = sprayY + r * Math.sin(angle);
         const localAlpha = fade * (1 - r / radius * 0.7);
-  ctx.fillStyle = `rgba(255,255,255,${localAlpha.toFixed(2)})`;
+        ctx.fillStyle = `rgba(255,255,255,${localAlpha.toFixed(2)})`;
         ctx.beginPath();
         ctx.arc(dx, dy, 1.3, 0, 2 * Math.PI);
         ctx.fill();
