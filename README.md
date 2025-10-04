@@ -1,13 +1,20 @@
 # Graffiti Nerd
 
-A simple graffiti drawing app built with React, Vite, and Tailwind CSS. The goal is to create a fun spray-paint simulation you can run as a static site (e.g., GitHub Pages).
+This is the original version of the graffiti drawing app, built with React, Vite, and Tailwind CSS. It features a simple spray-paint simulation and PNG export, designed for static hosting (e.g., GitHub Pages).
 
-## Features
+## Project Migration
+
+Graffiti Nerd is now archived as a legacy project. All new development, including advanced and realistic spray effects, will continue in the new repository:
+
+**Graffiti Trainer** — a next-generation graffiti app with realistic spray, drips, cap types, and more, using modern graphics libraries.
+
+See `docs/migration.md` for details.
+
+## Features (Legacy)
 
 - Spray paint effect (customizable)
 - Simple canvas drawing
 - PNG export
-- Keyboard shortcuts (coming soon)
 
 ## Quick Start
 
@@ -24,27 +31,12 @@ npm run build
 
 The output will be in the `dist/` folder. You can upload this to GitHub Pages or any static host.
 
-## Roadmap
-
-- Initialization & setup
-- Basic canvas drawing
-- Spray effect implementation
-  - Realistic spray: burst on click, edge fade, velocity-based dustiness
-  - Drip effect when holding still
-- Export as PNG
-- UI improvements
-
 ## Tech Stack
 
 - React
 - Vite
 - Tailwind CSS
-- ESLint + Prettier
-
-## Contributing
-
-See CONTRIBUTING.md for guidelines.
 
 ---
 
-This project is for learning and fun. Enjoy making graffiti art!
+This project is for learning and fun. For the latest and most realistic graffiti simulation, check out Graffiti Trainer!
