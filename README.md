@@ -29,6 +29,8 @@ The output will be in the `dist/` folder. You can upload this to GitHub Pages or
 - Initialization & setup
 - Basic canvas drawing
 - Spray effect implementation
+  - Realistic spray: burst on click, edge fade, velocity-based dustiness
+  - Drip effect when holding still
 - Export as PNG
 - UI improvements
 
