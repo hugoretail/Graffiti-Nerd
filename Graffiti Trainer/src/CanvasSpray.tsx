@@ -5,6 +5,7 @@ import { useSpray } from './useSpray';
 
 export interface CanvasSprayHandle {
   download: () => void; //download PNG helper
+  clear: () => void; //clear canvas helper
   getCanvas: () => HTMLCanvasElement | null;
 }
 
@@ -31,6 +32,19 @@ const CanvasSpray = forwardRef<CanvasSprayHandle, CanvasSprayProps>(function Can
         link.href = url;
         link.click();
       });
+    },
+    clear: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      //this is a normal comment: subtle flash feedback
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.15);pointer-events:none;opacity:1;transition:opacity 260ms ease';
+      document.body.appendChild(flash);
+      requestAnimationFrame(()=> flash.style.opacity = '0');
+      setTimeout(()=> flash.remove(), 300);
     },
     getCanvas: () => canvasRef.current,
   }), []);

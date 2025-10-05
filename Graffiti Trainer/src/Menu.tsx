@@ -1,15 +1,38 @@
 //slide-in burger menu component
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { caps } from './sprayCaps';
 
 interface MenuProps {
   current: string;
   onSelect: (id: string) => void;
   onDownload: () => void;
+  onClear: () => void;
 }
 
-export function Menu({ current, onSelect, onDownload }: MenuProps) {
+export function Menu({ current, onSelect, onDownload, onClear }: MenuProps) {
   const [open, setOpen] = useState(false);
+  const [ctrl, setCtrl] = useState(false);
+
+  //track ctrl pressed for handle transformation
+  useEffect(() => {
+    function down(e: KeyboardEvent) {
+      if (e.key === 'Control') setCtrl(true);
+    }
+    function up(e: KeyboardEvent) {
+      if (e.key === 'Control') setCtrl(false);
+    }
+    function blur() { setCtrl(false); }
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    window.addEventListener('blur', blur);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', blur);
+    };
+  }, []);
+
+  const icon = ctrl ? '🗑' : '☰';
 
   return (
     <>
@@ -37,10 +60,19 @@ export function Menu({ current, onSelect, onDownload }: MenuProps) {
           userSelect: 'none',
           transition: 'left 260ms ease'
         }}
-        onClick={() => setOpen(o => !o)}
+        onClick={(e) => {
+          if (ctrl) {
+            //clear instead of toggling menu
+            e.preventDefault();
+            onClear();
+            return;
+          }
+            setOpen(o => !o);
+        }}
         onMouseDown={(e) => e.stopPropagation()}
+        title={ctrl ? 'Clear canvas (Ctrl+Click)' : 'Menu (Ctrl+Click to Clear)'}
       >
-        ☰
+        {icon}
       </div>
       {/*panel*/}
       <div
