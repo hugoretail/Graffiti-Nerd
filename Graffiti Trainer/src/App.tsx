@@ -1,11 +1,29 @@
-
-import { useEffect, useRef } from 'react'
+  
+import { useCallback, useEffect, useRef } from 'react';
 function CanvasSpray() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const spraying = useRef(false)
   const mousePos = useRef<{ x: number; y: number } | null>(null)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
   const sprayFrame = useRef<number | null>(null)
+
+  const downloadImage = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // Ensure any pending frame draws are flushed
+    requestAnimationFrame(() => {
+      try {
+        const url = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+        link.download = `graffiti-${timestamp}.png`;
+        link.href = url;
+        link.click();
+      } catch (e) {
+        console.error('Failed to export canvas', e);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -122,15 +140,37 @@ function CanvasSpray() {
 
   //canvas fills the whole screen
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#222',
-        display: 'block',
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100vw',
+          height: '100vh',
+          background: '#222',
+          display: 'block',
+        }}
+      />
+      <button
+        onClick={downloadImage}
+        style={{
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          background: '#ffffff10',
+          color: '#fff',
+          backdropFilter: 'blur(4px)',
+          border: '1px solid #555',
+          padding: '8px 14px',
+          fontSize: '14px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontFamily: 'system-ui, sans-serif'
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        Download PNG
+      </button>
+    </>
   );
 
 }
