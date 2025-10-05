@@ -61,13 +61,10 @@ function CanvasSpray() {
       if (!spraying.current || !mousePos.current || !ctx) return;
       const { x, y } = mousePos.current;
       let velocity = 0;
-      let lastX = x, lastY = y;
       if (lastPos.current) {
         const dx = x - lastPos.current.x;
         const dy = y - lastPos.current.y;
         velocity = Math.sqrt(dx * dx + dy * dy);
-        lastX = lastPos.current.x;
-        lastY = lastPos.current.y;
       }
       //can control: mouse speed maps to spray sharpness, size, and paint amount
       const minAlpha = 0.38;
@@ -82,7 +79,6 @@ function CanvasSpray() {
       //fade sharper with speed
       const fade = Math.max(minAlpha, maxAlpha - v * 0.018);
   const minDensity = 120;
-  const maxDensity = 8000;
       //emit dots based on distance moved, not FPS
       let distance = 0;
       if (lastPos.current) {
