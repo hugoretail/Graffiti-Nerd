@@ -96,14 +96,21 @@ export function useSpray(canvasRef: React.RefObject<HTMLCanvasElement>, options:
         velocity = Math.sqrt(dx * dx + dy * dy);
       }
 
-      //dynamic radius interpolation vs velocity (higher velocity -> smaller radius for control lines)
-      const vClamp = Math.min(Math.max(velocity, 0), 40);
-      const radius = cap.maxRadius - (vClamp / 40) * (cap.maxRadius - cap.minRadius);
+  //this is a normal comment: Velocity-as-distance heuristic.
+  //We can't know real nozzle distance in 2D, so we infer an inverse relationship:
+  // higher velocity => user is making controlled, closer strokes (tight, sharp, concentrated)
+  // lower velocity (or hovering) => nozzle is effectively farther (wider, softer cloud, lower density)
+  //We map velocity into [0,1] then shape curves for radius, density and alpha.
+  const vClamp = Math.min(Math.max(velocity, 0), 50); //allow a little higher headroom
+  const vNorm = vClamp / 50; //0..1
 
-      //fade based on velocity (faster = sharper/lighter)
-      const baseMinAlpha = 0.35;
-      const baseMaxAlpha = 0.95 * cap.alphaFactor;
-      const fade = Math.max(baseMinAlpha, baseMaxAlpha - vClamp * 0.02);
+  //Radius: large when slow (far), small when fast (close)
+  const radius = cap.minRadius + (1 - vNorm) * (cap.maxRadius - cap.minRadius);
+
+  //Alpha core: we want sharper (stronger central opacity) when velocity is high (close)
+  const baseMinAlpha = 0.25; //softer floor
+  const baseMaxAlpha = 0.97 * cap.alphaFactor;
+  const fade = baseMinAlpha + vNorm * (baseMaxAlpha - baseMinAlpha); //linear blend (could use easing)
 
       //distance traveled this frame for density scaling
       let distance = 0;
@@ -113,28 +120,36 @@ export function useSpray(canvasRef: React.RefObject<HTMLCanvasElement>, options:
         distance = Math.sqrt(dx * dx + dy * dy);
       }
 
-      //base dots per pixel moved
-      const dotsPerPixel = cap.density / 10; //scaling constant
-      const minDensity = cap.density * 3; //baseline when almost stationary
-      const totalDots = Math.max(minDensity, Math.round(distance * dotsPerPixel));
+  //Density: previously more distance => more dots. Now also scale by velocity for closer/denser spray.
+  //Slow movement still needs baseline fill but not overly dense.
+  const baseDotsPerPixel = cap.density / 12; //slightly reduced baseline
+  const velocityBoost = 1 + vNorm * 2.2; //up to 3.2x at max speed
+  const dotsPerPixel = baseDotsPerPixel * velocityBoost;
+  //Minimum density also scales a bit with velocity so quick flicks leave visible narrow lines.
+  const minDensity = cap.density * (1.2 + vNorm * 1.8);
+  const totalDots = Math.max(minDensity, Math.round(distance * dotsPerPixel));
 
       for (let d = 0; d < totalDots; d++) {
         const t = totalDots === 1 ? 1 : d / totalDots;
         const baseX = lastPos.current ? lastPos.current.x + (x - lastPos.current.x) * t : x;
         const baseY = lastPos.current ? lastPos.current.y + (y - lastPos.current.y) * t : y;
         const angle = Math.random() * Math.PI * 2;
-        const r = radius * Math.pow(Math.random(), cap.falloffPow);
+  //r distribution: when fast (close) we want tighter cluster; when slow (far) more spread.
+  const spreadPow = cap.falloffPow + (1 - vNorm) * 0.6; //increase softness when slow
+  const r = radius * Math.pow(Math.random(), spreadPow);
         const dx = baseX + r * Math.cos(angle);
         const dy = baseY + r * Math.sin(angle);
-        const localAlpha = fade * (1 - r / radius * 0.7);
+  //Edge falloff: stronger central alpha when fast (close)
+  const edgeFactor = 0.7 - vNorm * 0.25; //sharper edge at high velocity
+  const localAlpha = fade * (1 - (r / radius) * edgeFactor);
         ctx.fillStyle = `rgba(255,255,255,${localAlpha.toFixed(2)})`; //color fixed white per user request
         ctx.beginPath();
         ctx.arc(dx, dy, 1.2 + r * 0.02, 0, Math.PI * 2);
         ctx.fill();
 
         //halo overspray (light faint outer dots)
-        if (cap.halo > 0 && Math.random() < 0.05) {
-          const hr = radius * (0.9 + Math.random() * 0.5) * cap.halo;
+        if (cap.halo > 0 && Math.random() < (0.04 + (1 - vNorm) * 0.04)) { //slightly more halo when slower/farther
+          const hr = radius * (0.9 + Math.random() * 0.5) * cap.halo * (1 + (1 - vNorm) * 0.4);
           const hx = baseX + hr * Math.cos(Math.random() * Math.PI * 2);
           const hy = baseY + hr * Math.sin(Math.random() * Math.PI * 2);
           ctx.fillStyle = `rgba(255,255,255,${(localAlpha * 0.15).toFixed(2)})`;
